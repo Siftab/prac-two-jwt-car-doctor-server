@@ -1,18 +1,24 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require("jsonwebtoken")
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const app = express();
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(cors({
+    origin:["http://localhost:5173"],
+    credentials:true
+}));
 app.use(express.json());
 
 
 console.log(process.env.DB_PASS)
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.swu9d.mongodb.net/?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.i7jrqrv.mongodb.net/?retryWrites=true&w=majority`
+// const uri = `mongodb+srv://siffuuu:$rO2y1bMjefq4qrfx@cluster0.i7jrqrv.mongodb.net/?retryWrites=true&w=majority`
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.swu9d.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -28,8 +34,33 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
 
-        const serviceCollection = client.db('carDoctor').collection('services');
-        const bookingCollection = client.db('carDoctor').collection('bookings');
+        const serviceCollection = client.db('car-doctor').collection('services');
+        const bookingCollection = client.db('car-doctor').collection('bookings');
+
+        // JWT Apis 
+        app.post("/jwt",async(req,res)=>{
+           const dat=req.body;
+           console.log(dat)
+           const token = jwt.sign(dat,process.env.SECRET_TOKEN,{expiresIn: "1h"})
+           console.log( "token ",token)
+
+           res
+           .cookie("token",token,{
+            httpOnly:true,
+            secure:true,
+            sameSite:"none"
+           })
+           .send({success:true})
+ 
+        })
+        app.post('/logout',async(req,res)=>{
+            console.log("clearing cookie")
+            res.clearCookie("token",{maxAge:0}).send({success:true})
+            
+        })
+
+
+
 
         app.get('/services', async (req, res) => {
             const cursor = serviceCollection.find();
@@ -53,7 +84,7 @@ async function run() {
 
         // bookings 
         app.get('/bookings', async (req, res) => {
-            console.log(req.query.email);
+            // console.log(req.query.email);
             let query = {};
             if (req.query?.email) {
                 query = { email: req.query.email }
