@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require("jsonwebtoken")
+const cookieParser = require('cookie-parser')
+
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const app = express();
@@ -12,6 +14,7 @@ app.use(cors({
     credentials:true
 }));
 app.use(express.json());
+app.use(cookieParser());
 
 
 console.log(process.env.DB_PASS)
@@ -36,7 +39,17 @@ async function run() {
 
         const serviceCollection = client.db('car-doctor').collection('services');
         const bookingCollection = client.db('car-doctor').collection('bookings');
+//   MiddleWear
+const logger=(req,res,next)=>{
+    console.log("this is loger update", req.method,req.url)
+    next();
+}
 
+const verifyToken =(req,res,next)=>{
+    const token = req.cookies?.token;
+    console.log("this is token from middlewear =>",token)
+    next()
+}
         // JWT Apis 
         app.post("/jwt",async(req,res)=>{
            const dat=req.body;
@@ -83,8 +96,8 @@ async function run() {
 
 
         // bookings 
-        app.get('/bookings', async (req, res) => {
-            // console.log(req.query.email);
+        app.get('/bookings',logger, verifyToken, async (req, res) => {
+            // console.log("this is cookie",req.cookies);
             let query = {};
             if (req.query?.email) {
                 query = { email: req.query.email }
